@@ -1,0 +1,230 @@
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Put,
+  Param,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { SignUpDto } from './dto/sign-up.dto';
+import { ConfirmUserDto } from './dto/confirm-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateAuthUserDto } from './dto/update-user.dto';
+import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
+
+@ApiTags('Auth')
+@Controller('api/v1/auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('signUp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'SignUp', description: 'Register a new user' })
+  @ApiResponse({
+    status: 200,
+    description: 'User registered successfully',
+    schema: {
+      example: {
+        succeeded: true,
+        title: 'Operation successful',
+        message: 'The operation was executed successfully.',
+        data: {
+          userId: '123e4567-e89b-12d3-a456-426614174000',
+          email: 'user@example.com',
+          name: 'John Doe',
+          username: 'john_doe',
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User registration error',
+    schema: {
+      example: {
+        succeeded: false,
+        title: 'Operation failed',
+        message: 'Detailed error message explaining the failure.',
+      },
+    },
+  })
+  async signUp(@Body() signUpDto: SignUpDto) {
+    return this.authService.signUp(signUpDto);
+  }
+
+  // Endpoint eliminado: POST /api/v1/auth/confirm
+  // No se utiliza en el sistema actual
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login', description: 'User login' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    schema: {
+      example: {
+        succeeded: true,
+        title: 'Operation successful',
+        message: 'The operation was executed successfully.',
+        data: {
+          access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          user: {
+            id: '1',
+            email: 'user@example.com',
+            name: 'John Doe',
+            roles: ['admin'],
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Login error',
+    schema: {
+      example: {
+        succeeded: false,
+        title: 'Operation failed',
+        message: 'Detailed error message explaining the failure.',
+      },
+    },
+  })
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
+  }
+
+  // Endpoints eliminados por redundancia:
+  // - GET /api/v1/auth/users/:id/role → Usar GET /users/:id/roles
+  // - POST /api/v1/auth/admin/add → Usar POST /users/:id/roles/:roleId
+  // - POST /api/v1/auth/admin/remove → Usar DELETE /users/:id/roles/:roleId
+  // - GET /api/v1/auth/admin/test → Endpoint de prueba, eliminado
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Update User',
+    description: 'Update a user',
+  })
+  @ApiParam({ name: 'id', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated successfully',
+    schema: {
+      example: {
+        succeeded: true,
+        title: 'Operation successful',
+        message: 'The operation was executed successfully.',
+        data: {
+          name: 'John Doe',
+          username: 'john_doe',
+          phoneNumber: '+1234567890',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User update error',
+    schema: {
+      example: {
+        succeeded: false,
+        title: 'Operation failed',
+        message: 'Detailed error message explaining the failure.',
+      },
+    },
+  })
+  async updateUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateAuthUserDto,
+  ) {
+    return this.authService.updateUser(id, updateUserDto);
+  }
+
+  @Post('reset-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reset User Password',
+    description: 'Reset a user password',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User password reset successfully',
+    schema: {
+      example: {
+        succeeded: true,
+        title: 'Operation successful',
+        message: 'The operation was executed successfully.',
+        data: {},
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User password reset error',
+    schema: {
+      example: {
+        succeeded: false,
+        title: 'Operation failed',
+        message: 'Detailed error message explaining the failure.',
+      },
+    },
+  })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get all users',
+    description: 'Get all users',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved users',
+    schema: {
+      example: {
+        succeeded: true,
+        title: 'Operation successful',
+        message: 'The operation was executed successfully.',
+        data: [{}],
+        meta: {
+          page: 1,
+          take: 10,
+          itemCount: 100,
+          pageCount: 10,
+          hasPreviousPage: false,
+          hasNextPage: true,
+        },
+      },
+    },
+  })
+  async getAllUsers(@Query() query: GetUsersQueryDto) {
+    return this.authService.getAllUsers(query);
+  }
+}

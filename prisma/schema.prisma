@@ -1,0 +1,347 @@
+// Esquema de Datos Final - Sistema de Control de Rifas
+// Con sistema de roles y permisos separados
+// Cierre de turno es una vista/consulta, no una tabla
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum TipoAlerta {
+  restriccion_numero
+  cierre_turno
+  bloqueo_ventas
+}
+
+enum EstadoAlerta {
+  activa
+  vista
+  resuelta
+}
+
+enum EstadoGeneral {
+  activo
+  inactivo
+}
+
+enum CategoriaTurno {
+  diaria
+  tica
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+// 1. ROLES (Catálogo de roles)
+model Role {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(50) // Ej: "admin", "vendedor"
+  descripcion String?   @db.Text
+  estado      EstadoGeneral @default(activo)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  usuarios     UsuarioRole[]
+  permisos     RolePermiso[]
+
+  @@index([nombre])
+  @@index([estado])
+  @@map("roles")
+}
+
+// 2. PERMISOS (Catálogo de permisos)
+model Permiso {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(100) // Ej: "crear_usuario", "editar_turno"
+  descripcion String?   @db.Text
+  modulo      String    @db.VarChar(50) // Ej: "usuarios", "turnos", "ventas"
+  estado      EstadoGeneral @default(activo)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  roles       RolePermiso[]
+
+  @@index([nombre])
+  @@index([modulo])
+  @@index([estado])
+  @@map("permisos")
+}
+
+// 3. USUARIOS/EMPLEADOS
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(100)
+  passwordHash  String    @map("password_hash") @db.Text
+  estado        EstadoGeneral @default(activo)
+  lastLogin     DateTime? @map("last_login") @db.Timestamp
+  createdById   Int?      @map("created_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  createdBy     User?     @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers  User[]    @relation("UserCreatedBy")
+  turnosCreados Turno[]   @relation("TurnoCreadoPor")
+  ventas        Venta[]
+  cierresTurno  CierreTurno[] @relation("CierreCerradoPor")
+  sorteos       Sorteo[] @relation("SorteoCreadoPor")
+  alertas       Alerta[]
+  auditoria     Auditoria[]
+  roles         UsuarioRole[]
+
+  @@index([email])
+  @@index([estado])
+  @@map("users")
+}
+
+// 4. USUARIO_ROLE (Tabla de relación Usuario-Rol)
+model UsuarioRole {
+  id          Int       @id @default(autoincrement())
+  usuarioId   Int       @map("usuario_id")
+  roleId      Int       @map("role_id")
+  asignadoPor Int?      @map("asignado_por")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  usuario     User      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, roleId])
+  @@index([usuarioId])
+  @@index([roleId])
+  @@map("usuario_roles")
+}
+
+// 5. ROLE_PERMISO (Tabla de relación Rol-Permiso)
+model RolePermiso {
+  id          Int       @id @default(autoincrement())
+  roleId      Int       @map("role_id")
+  permisoId   Int       @map("permiso_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+
+  // Relations
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permiso     Permiso   @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permisoId])
+  @@index([roleId])
+  @@index([permisoId])
+  @@map("role_permisos")
+}
+
+// 6. TURNOS (Catálogo - Maestro para ventas)
+model Turno {
+  id              Int       @id @default(autoincrement())
+  nombre          String    @db.VarChar(100) // Ej: "TURNO 6PM", "TARDE 3PM"
+  categoria       CategoriaTurno @default(diaria) // Categoría: "diaria" o "tica"
+  hora            String?   @db.VarChar(10) // Hora de inicio (ej: "18:00", "15:00")
+  horaCierre      String?   @map("hora_cierre") @db.VarChar(10) // Hora de cierre
+  tiempoAlerta    Int       @default(10) @map("tiempo_alerta") // Minutos antes del cierre para alerta
+  tiempoBloqueo   Int       @default(5) @map("tiempo_bloqueo") // Minutos antes del cierre para bloquear
+  descripcion     String?   @db.Text
+  mensaje         String?   @db.Text // Mensaje para mostrar en boucher
+  estado          EstadoGeneral @default(activo)
+  createdById     Int       @map("created_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  createdBy       User      @relation("TurnoCreadoPor", fields: [createdById], references: [id], onDelete: Restrict)
+  ventas          Venta[] // Las ventas se relacionan directamente con el turno
+  cierresTurno    CierreTurno[] // Marcadores de cierre
+  restricciones   RestriccionNumero[]
+  sorteos         Sorteo[]
+  alertas         Alerta[]
+
+  @@index([nombre])
+  @@index([estado])
+  @@index([categoria])
+  @@index([categoria, estado])
+  @@map("turnos")
+}
+
+// 7. VENTAS (Bouchers/Facturas - Maestro)
+model Venta {
+  id              Int       @id @default(autoincrement())
+  numeroBoucher   String    @unique @map("numero_boucher") @db.VarChar(50) // Formato: "B-YYYY-NNNNNN"
+  turnoId         Int       @map("turno_id") // Relación directa con turno
+  fecha           DateTime  @db.Date // Fecha de la venta
+  fechaHora       DateTime  @default(now()) @map("fecha_hora") @db.Timestamp
+  usuarioId       Int       @map("usuario_id")
+  total           Decimal   @default(0) @db.Decimal(10, 2)
+  observaciones   String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  turno           Turno     @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+  usuario         User      @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  detallesVenta   DetalleVenta[] // Relación maestro-detalle
+
+  @@index([numeroBoucher]) // Para búsqueda rápida en reclamos
+  @@index([turnoId, fecha]) // Para consultar ventas por turno y fecha (cierre de turno)
+  @@index([usuarioId, turnoId, fecha]) // Para consultar ventas de usuario por turno
+  @@index([usuarioId])
+  @@index([fecha])
+  @@map("ventas")
+}
+
+// 8. DETALLES DE VENTA (Detalle - Números vendidos)
+model DetalleVenta {
+  id          Int       @id @default(autoincrement())
+  ventaId     Int       @map("venta_id")
+  numero      Int       // Número de la rifa (00-99)
+  monto       Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+
+  // Relations
+  venta       Venta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+      @@index([ventaId])
+      @@index([numero])
+      @@map("detalles_venta")
+}
+
+// 9. CIERRE DE TURNO (Marcador de cierre - las ventas se agregan automáticamente)
+model CierreTurno {
+  id              Int       @id @default(autoincrement())
+  turnoId         Int       @map("turno_id")
+  fecha           DateTime  @db.Date
+  cerradoPor      Int?      @map("cerrado_por") // Admin que cerró el turno
+  cerradoEn       DateTime  @default(now()) @map("cerrado_en") @db.Timestamp
+  observaciones   String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  turno           Turno     @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+  cerradoPorUser  User?     @relation("CierreCerradoPor", fields: [cerradoPor], references: [id], onDelete: SetNull)
+
+  @@unique([turnoId, fecha]) // Un cierre único por turno y fecha
+  @@index([turnoId])
+  @@index([fecha])
+  @@index([cerradoEn])
+  @@map("cierres_turno")
+}
+
+// 10. RESTRICCIONES DE NÚMEROS
+model RestriccionNumero {
+  id              Int       @id @default(autoincrement())
+  turnoId         Int       @map("turno_id")
+  numero          Int       // Número restringido (0-99)
+  fecha           DateTime  @db.Date
+  estaRestringido Boolean   @default(true) @map("esta_restringido") // Siempre true cuando existe el registro
+  tipoRestriccion String?   @default("completo") @map("tipo_restriccion") // "completo", "monto", "cantidad"
+  limiteMonto     Decimal?  @map("limite_monto") @db.Decimal(10, 2) // Límite de monto si tipoRestriccion = "monto"
+  limiteCantidad Int?       @map("limite_cantidad") // Límite de cantidad si tipoRestriccion = "cantidad"
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  turno           Turno     @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+
+  @@unique([turnoId, numero, fecha])
+  @@index([turnoId, fecha])
+  @@index([numero])
+  @@index([estaRestringido])
+  @@map("restricciones_numeros")
+}
+
+// 11. SORTEOS (Para KPIs)
+model Sorteo {
+  id            Int       @id @default(autoincrement())
+  turnoId       Int       @map("turno_id")
+  fecha         DateTime  @db.Date
+  numeroGanador Int       @map("numero_ganador") // OBLIGATORIO
+  montoPremio   Decimal?  @map("monto_premio") @db.Decimal(10, 2)
+  descripcion   String?   @db.Text
+  realizadoPor  Int       @map("realizado_por")
+  realizadoEn   DateTime  @default(now()) @map("realizado_en") @db.Timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  turno         Turno     @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+  realizadoPorUser User   @relation("SorteoCreadoPor", fields: [realizadoPor], references: [id], onDelete: Restrict)
+
+  @@unique([turnoId, fecha])
+      @@index([turnoId])
+      @@index([fecha])
+      @@index([numeroGanador])
+      @@map("sorteos")
+}
+
+// 12. ALERTAS
+model Alerta {
+  id          Int         @id @default(autoincrement())
+  usuarioId   Int         @map("usuario_id")
+  tipo        TipoAlerta
+  titulo      String      @db.VarChar(200)
+  mensaje     String      @db.Text
+  numero      Int?        // Número relacionado (si aplica)
+  turnoId     Int?        @map("turno_id")
+  estado      EstadoAlerta @default(activa)
+  vistaEn     DateTime?   @map("vista_en") @db.Timestamp
+  resueltaEn  DateTime?   @map("resuelta_en") @db.Timestamp
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  usuario     User        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  turno       Turno?      @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, estado])
+  @@index([tipo])
+  @@index([createdAt])
+  @@map("alertas")
+}
+
+// 13. CONFIGURACIONES (Catálogo)
+model Configuracion {
+  id          Int       @id @default(autoincrement())
+  clave       String    @unique @db.VarChar(100)
+  valor       String    @db.Text
+  descripcion String?   @db.Text
+  tipo        String    @default("string") @db.VarChar(50)
+  estado      EstadoGeneral @default(activo)
+  updatedBy   Int?      @map("updated_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp
+
+  @@index([clave])
+  @@index([estado])
+  @@map("configuraciones")
+}
+
+// 14. AUDITORÍA
+model Auditoria {
+  id          Int       @id @default(autoincrement())
+  usuarioId   Int?      @map("usuario_id")
+  accion      String    @db.VarChar(100)
+  entidad     String    @db.VarChar(50)
+  entidadId   Int?      @map("entidad_id")
+  detalles    Json?
+  ipAddress   String?   @map("ip_address") @db.VarChar(45)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp
+
+  // Relations
+  usuario     User?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@index([entidad, entidadId])
+  @@index([createdAt])
+  @@map("auditoria")
+}
