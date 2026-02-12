@@ -55,7 +55,7 @@ export class SorteosService {
           select: {
             id: true,
             name: true,
-            email: true,
+            telefono: true,
           },
         },
       },
@@ -72,7 +72,7 @@ export class SorteosService {
           select: {
             id: true,
             name: true,
-            email: true,
+            telefono: true,
           },
         },
       },

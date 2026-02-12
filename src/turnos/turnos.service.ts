@@ -42,7 +42,7 @@ export class TurnosService {
           select: {
             id: true,
             name: true,
-            email: true,
+            telefono: true,
           },
         },
       },
@@ -57,7 +57,7 @@ export class TurnosService {
           select: {
             id: true,
             name: true,
-            email: true,
+            telefono: true,
           },
         },
       },
