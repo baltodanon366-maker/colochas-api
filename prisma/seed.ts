@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -164,52 +163,39 @@ async function main() {
 
   console.log('✅ Permisos asociados a roles\n');
 
-  // 4. Crear Usuarios de Prueba
+  // 4. Crear Usuarios de Prueba (login por nombre + teléfono 8 dígitos)
   console.log('👤 Creando usuarios de prueba...');
 
-  // Hash de contraseñas específicas para cada rol
-  const adminPasswordHash = await bcrypt.hash('admin123', 10);
-  const vendedorPasswordHash = await bcrypt.hash('vendedor123', 10);
-  const supervisorPasswordHash = await bcrypt.hash('supervisor123', 10);
-
-  // Usuario Admin
   const adminUser = await prisma.user.create({
     data: {
       name: 'Administrador',
-      email: 'admin@colochas.com',
-      passwordHash: adminPasswordHash,
+      telefono: '12345678',
       estado: 'activo',
     },
   });
 
-  // Usuario Vendedor
   const vendedorUser = await prisma.user.create({
     data: {
       name: 'Juan Vendedor',
-      email: 'vendedor@colochas.com',
-      passwordHash: vendedorPasswordHash,
+      telefono: '87654321',
       estado: 'activo',
       createdById: adminUser.id,
     },
   });
 
-  // Usuario Supervisor
   const supervisorUser = await prisma.user.create({
     data: {
       name: 'María Supervisor',
-      email: 'supervisor@colochas.com',
-      passwordHash: supervisorPasswordHash,
+      telefono: '11223344',
       estado: 'activo',
       createdById: adminUser.id,
     },
   });
 
-  // Usuario Vendedor 2 (para pruebas adicionales)
   const vendedor2User = await prisma.user.create({
     data: {
       name: 'Pedro Vendedor',
-      email: 'vendedor2@colochas.com',
-      passwordHash: vendedorPasswordHash,
+      telefono: '55667788',
       estado: 'activo',
       createdById: adminUser.id,
     },

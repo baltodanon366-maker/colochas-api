@@ -1,12 +1,9 @@
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/sign-up.dto';
-// DTO eliminado: ConfirmUserDto - No se utiliza más
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateAuthUserDto } from './dto/update-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 
@@ -19,50 +16,37 @@ export class AuthService {
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
-    const { email, password, name, username } = signUpDto;
+    const { name, telefono, username } = signUpDto;
 
-    // Verificar si el usuario ya existe
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: { telefono },
     });
 
     if (existingUser) {
-      throw new BadRequestException('El usuario ya existe');
+      throw new BadRequestException('El teléfono ya está registrado');
     }
 
-    // Hash de la contraseña
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Crear usuario (sin roles por defecto, se asignan después)
     const user = await this.prisma.user.create({
       data: {
         name,
-        email,
-        passwordHash,
-        estado: 'inactivo', // Requiere confirmación
+        telefono,
+        estado: 'inactivo',
       },
     });
 
-    // Generar código de confirmación (en producción, enviar por email)
-    // Por ahora, retornamos el usuario creado
     return {
       userId: user.id.toString(),
-      email: user.email,
       name: user.name,
-      username: username || user.email.split('@')[0],
+      telefono: user.telefono,
       createdAt: user.createdAt.toISOString(),
     };
   }
 
-  // Método eliminado: confirmUser
-  // No se utiliza más en el sistema
-
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const { name, telefono } = loginDto;
 
-    // Buscar usuario
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    const user = await this.prisma.user.findFirst({
+      where: { name, telefono },
       include: {
         roles: {
           include: {
@@ -80,28 +64,18 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inactivo. Contacta al administrador.');
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-
-    // Actualizar last_login
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() },
     });
 
-    // Obtener roles activos
     const roles = user.roles
       .filter((ur) => ur.role.estado === 'activo')
       .map((ur) => ur.role.nombre);
 
-    // Generar JWT token
     const payload = {
-      sub: user.id, // Número, no string
-      email: user.email,
+      sub: user.id,
+      telefono: user.telefono,
       roles,
     };
 
@@ -111,18 +85,12 @@ export class AuthService {
       access_token: token,
       user: {
         id: user.id.toString(),
-        email: user.email,
         name: user.name,
+        telefono: user.telefono,
         roles,
       },
     };
   }
-
-  // Métodos eliminados por redundancia:
-  // - getUserRole() → Usar UsersService.getRoles()
-  // - addToAdminGroup() → Usar UsersService.assignRole()
-  // - removeFromAdminGroup() → Usar UsersService.removeRole()
-  // - adminTest() → Endpoint de prueba, eliminado
 
   async updateUser(id: string, updateUserDto: UpdateAuthUserDto) {
     const userId = parseInt(id);
@@ -143,34 +111,13 @@ export class AuthService {
       where: { id: userId },
       data: {
         ...(updateUserDto.name && { name: updateUserDto.name }),
+        ...(updateUserDto.telefono && { telefono: updateUserDto.telefono }),
       },
     });
 
     return {
       name: updatedUser.name,
-      username: updateUserDto.username || updatedUser.email.split('@')[0],
-      phoneNumber: updateUserDto.phoneNumber || null,
-    };
-  }
-
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
-    const { email } = resetPasswordDto;
-
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      // Por seguridad, no revelamos si el usuario existe
-      return {
-        message: 'Si el email existe, se enviará un enlace de restablecimiento',
-      };
-    }
-
-    // En producción, generar token y enviar email
-    // Por ahora, retornamos mensaje genérico
-    return {
-      message: 'Si el email existe, se enviará un enlace de restablecimiento',
+      telefono: updatedUser.telefono,
     };
   }
 
@@ -187,13 +134,10 @@ export class AuthService {
       sortOrder = 'ASC',
     } = query;
 
-    // Construir where clause
     const where: any = {};
 
-    // Solo aplicar filtros si se proporcionan los tres parámetros
     if (filterField && filterRule && filterValue) {
-      // Validar que filterField sea un campo válido del modelo User
-      const validFields = ['email', 'name', 'estado'];
+      const validFields = ['telefono', 'name', 'estado'];
       if (!validFields.includes(filterField)) {
         throw new BadRequestException(`Campo de filtro inválido: ${filterField}. Campos válidos: ${validFields.join(', ')}`);
       }
@@ -213,12 +157,10 @@ export class AuthService {
       }
     }
 
-    // Construir orderBy
     const orderBy: any = {};
     const sortFieldFinal = sortBy || sortField;
     if (sortFieldFinal) {
-      // Validar que el campo de ordenamiento sea válido
-      const validSortFields = ['email', 'name', 'createdAt', 'estado'];
+      const validSortFields = ['telefono', 'name', 'createdAt', 'estado'];
       if (!validSortFields.includes(sortFieldFinal)) {
         throw new BadRequestException(`Campo de ordenamiento inválido: ${sortFieldFinal}. Campos válidos: ${validSortFields.join(', ')}`);
       }
@@ -227,10 +169,8 @@ export class AuthService {
       orderBy.createdAt = 'desc';
     }
 
-    // Calcular skip
     const skip = offset !== undefined ? offset : (page - 1) * limit;
 
-    // Obtener usuarios
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
@@ -254,8 +194,8 @@ export class AuthService {
     return {
       data: users.map((user) => ({
         id: user.id,
-        email: user.email,
         name: user.name,
+        telefono: user.telefono,
         estado: user.estado,
         createdAt: user.createdAt.toISOString(),
         lastLogin: user.lastLogin?.toISOString(),

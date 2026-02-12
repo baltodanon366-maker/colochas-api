@@ -152,7 +152,7 @@ export class HistorialService {
           jsonb_agg(DISTINCT jsonb_build_object(
             'id', u.id,
             'name', u.name,
-            'email', u.email
+            'telefono', u.telefono
           )) as usuarios,
           jsonb_agg(DISTINCT t.categoria) as categorias
         FROM detalles_venta dv

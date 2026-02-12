@@ -1,23 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, Length, Matches } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
-    description: 'Email del usuario',
-    example: 'admin@colochas.com',
+    description: 'Nombre del usuario (nombre completo)',
+    example: 'Administrador',
   })
-  @IsEmail({}, { message: 'El email debe ser válido' })
-  @IsNotEmpty({ message: 'El email es requerido' })
-  email: string;
+  @IsString({ message: 'El nombre debe ser un texto' })
+  @IsNotEmpty({ message: 'El nombre es requerido' })
+  name: string;
 
   @ApiProperty({
-    description: 'Contraseña del usuario',
-    example: 'admin123',
-    minLength: 6,
+    description: 'Número de teléfono (8 dígitos)',
+    example: '12345678',
+    minLength: 8,
+    maxLength: 8,
   })
-  @IsString({ message: 'La contraseña debe ser un texto' })
-  @IsNotEmpty({ message: 'La contraseña es requerida' })
-  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
-  password: string;
+  @IsString({ message: 'El teléfono debe ser un texto' })
+  @IsNotEmpty({ message: 'El teléfono es requerido' })
+  @Length(8, 8, { message: 'El teléfono debe tener exactamente 8 dígitos' })
+  @Matches(/^\d{8}$/, { message: 'El teléfono debe contener solo 8 dígitos numéricos' })
+  telefono: string;
 }
-

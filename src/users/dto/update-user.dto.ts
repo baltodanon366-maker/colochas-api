@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiProperty({
@@ -12,12 +12,15 @@ export class UpdateUserDto {
   name?: string;
 
   @ApiProperty({
-    description: 'Email del usuario',
-    example: 'juan@colochas.com',
+    description: 'Número de teléfono (8 dígitos)',
+    example: '87654321',
     required: false,
+    minLength: 8,
+    maxLength: 8,
   })
   @IsOptional()
-  @IsEmail({}, { message: 'El email debe ser válido' })
-  email?: string;
+  @IsString({ message: 'El teléfono debe ser un texto' })
+  @Length(8, 8, { message: 'El teléfono debe tener exactamente 8 dígitos' })
+  @Matches(/^\d{8}$/, { message: 'El teléfono debe contener solo 8 dígitos numéricos' })
+  telefono?: string;
 }
-

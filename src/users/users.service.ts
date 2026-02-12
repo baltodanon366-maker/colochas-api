@@ -1,24 +1,19 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto, createdById: number) {
-    const { name, email, password, roleIds = [] } = createUserDto;
-
-    const passwordHash = await bcrypt.hash(password, 10);
+    const { name, telefono, roleIds = [] } = createUserDto;
 
     const result = await this.prisma.$queryRaw<Array<{ resultado: any }>>`
       SELECT registrar_usuario(
         ${name}::VARCHAR(100),
-        ${email}::VARCHAR(100),
-        ${passwordHash}::TEXT,
+        ${telefono}::VARCHAR(8),
         ${createdById}::INTEGER,
         ${roleIds}::integer[]
       ) as resultado
@@ -58,7 +53,7 @@ export class UsersService {
     return {
       id: user.id,
       name: user.name,
-      email: user.email,
+      telefono: user.telefono,
       estado: user.estado,
       lastLogin: user.lastLogin,
       createdAt: user.createdAt,
@@ -84,47 +79,6 @@ export class UsersService {
       where: { id },
       data: updateUserDto,
     });
-  }
-
-  async updatePassword(id: number, updatePasswordDto: UpdatePasswordDto) {
-    const { currentPassword, newPassword } = updatePasswordDto;
-
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-    });
-
-    if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
-    }
-
-    // Verificar contraseña actual
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new BadRequestException('Contraseña actual incorrecta');
-    }
-
-    // Hash de nueva contraseña
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-    // Llamar al stored procedure
-    const result = await this.prisma.$queryRaw<Array<{ resultado: any }>>`
-      SELECT actualizar_password(
-        ${id},
-        ${user.passwordHash},
-        ${newPasswordHash}
-      ) as resultado
-    `;
-
-    const data = result[0]?.resultado;
-
-    if (!data || !data.exito) {
-      throw new BadRequestException(data?.error || 'Error al actualizar contraseña');
-    }
-
-    return {
-      message: data.message || 'Contraseña actualizada exitosamente',
-    };
   }
 
   async activate(id: number, activatedById: number) {

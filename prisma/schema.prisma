@@ -78,12 +78,11 @@ model Permiso {
   @@map("permisos")
 }
 
-// 3. USUARIOS/EMPLEADOS
+// 3. USUARIOS/EMPLEADOS (login por nombre + teléfono 8 dígitos)
 model User {
   id            Int       @id @default(autoincrement())
   name          String    @db.VarChar(100)
-  email         String    @unique @db.VarChar(100)
-  passwordHash  String    @map("password_hash") @db.Text
+  telefono      String    @unique @db.VarChar(8) // 8 dígitos fijos, reemplaza email/contraseña
   estado        EstadoGeneral @default(activo)
   lastLogin     DateTime? @map("last_login") @db.Timestamp
   createdById   Int?      @map("created_by_id")
@@ -101,7 +100,7 @@ model User {
   auditoria     Auditoria[]
   roles         UsuarioRole[]
 
-  @@index([email])
+  @@index([telefono])
   @@index([estado])
   @@map("users")
 }

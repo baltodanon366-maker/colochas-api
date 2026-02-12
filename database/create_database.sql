@@ -55,12 +55,11 @@ CREATE INDEX idx_permisos_nombre ON permisos(nombre);
 CREATE INDEX idx_permisos_modulo ON permisos(modulo);
 CREATE INDEX idx_permisos_estado ON permisos(estado);
 
--- 3. USUARIOS/EMPLEADOS
+-- 3. USUARIOS/EMPLEADOS (login por nombre + teléfono 8 dígitos)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
+    telefono VARCHAR(8) UNIQUE NOT NULL,
     estado estado_general DEFAULT 'activo',
     last_login TIMESTAMP,
     created_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -68,7 +67,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_telefono ON users(telefono);
 CREATE INDEX idx_users_estado ON users(estado);
 
 -- 4. USUARIO_ROLE (Relación Usuario-Rol)
@@ -367,11 +366,9 @@ WHERE nombre IN (
     'ver_restricciones'
 );
 
--- Insertar usuario admin inicial (password: admin123 - cambiar en producción)
--- Hash bcrypt de "admin123": $2b$10$rOzJqZqZqZqZqZqZqZqZqO
--- NOTA: Cambiar este hash por uno real generado con bcrypt
-INSERT INTO users (name, email, password_hash, estado, created_at) VALUES
-('Administrador', 'admin@colochas.com', '$2b$10$rOzJqZqZqZqZqZqZqZqZqO', 'activo', NOW());
+-- Insertar usuario admin inicial (teléfono 8 dígitos - cambiar en producción)
+INSERT INTO users (name, telefono, estado, created_at) VALUES
+('Administrador', '12345678', 'activo', NOW());
 
 -- Asignar rol admin al usuario inicial
 INSERT INTO usuario_roles (usuario_id, role_id, created_at) VALUES

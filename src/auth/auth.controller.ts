@@ -20,8 +20,6 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/sign-up.dto';
-import { ConfirmUserDto } from './dto/confirm-user.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateAuthUserDto } from './dto/update-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -48,10 +46,9 @@ export class AuthController {
         title: 'Operation successful',
         message: 'The operation was executed successfully.',
         data: {
-          userId: '123e4567-e89b-12d3-a456-426614174000',
-          email: 'user@example.com',
+          userId: '1',
           name: 'John Doe',
-          username: 'john_doe',
+          telefono: '12345678',
           createdAt: '2024-01-01T00:00:00.000Z',
         },
       },
@@ -91,8 +88,8 @@ export class AuthController {
           access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
           user: {
             id: '1',
-            email: 'user@example.com',
             name: 'John Doe',
+            telefono: '12345678',
             roles: ['admin'],
           },
         },
@@ -138,8 +135,7 @@ export class AuthController {
         message: 'The operation was executed successfully.',
         data: {
           name: 'John Doe',
-          username: 'john_doe',
-          phoneNumber: '+1234567890',
+          telefono: '12345678',
         },
       },
     },
@@ -160,40 +156,6 @@ export class AuthController {
     @Body() updateUserDto: UpdateAuthUserDto,
   ) {
     return this.authService.updateUser(id, updateUserDto);
-  }
-
-  @Post('reset-password')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Reset User Password',
-    description: 'Reset a user password',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'User password reset successfully',
-    schema: {
-      example: {
-        succeeded: true,
-        title: 'Operation successful',
-        message: 'The operation was executed successfully.',
-        data: {},
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'User password reset error',
-    schema: {
-      example: {
-        succeeded: false,
-        title: 'Operation failed',
-        message: 'Detailed error message explaining the failure.',
-      },
-    },
-  })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Get()

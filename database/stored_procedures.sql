@@ -438,7 +438,7 @@ BEGIN
         'vendedor', jsonb_build_object(
             'id', u.id,
             'name', u.name,
-            'email', u.email
+            'telefono', u.telefono
         ),
         'turno', jsonb_build_object(
             'id', t.id,
@@ -584,7 +584,7 @@ BEGIN
         jsonb_build_object(
             'usuario_id', usuario_id,
             'name', name,
-            'email', email,
+            'telefono', telefono,
             'total_ventas', total_ventas,
             'total_monto', total_monto
         ) ORDER BY total_ventas DESC
@@ -593,13 +593,13 @@ BEGIN
         SELECT 
             u.id as usuario_id,
             u.name,
-            u.email,
+            u.telefono,
             COUNT(v.id) as total_ventas,
             SUM(v.total) as total_monto
         FROM users u
         JOIN ventas v ON u.id = v.usuario_id
         WHERE v.fecha BETWEEN p_fecha_inicio AND p_fecha_fin
-        GROUP BY u.id, u.name, u.email
+        GROUP BY u.id, u.name, u.telefono
         ORDER BY total_ventas DESC
         LIMIT 10
     ) subquery;
@@ -747,7 +747,7 @@ BEGIN
             'vendedor', jsonb_build_object(
                 'id', u.id,
                 'name', u.name,
-                'email', u.email
+                'telefono', u.telefono
             ),
             'detalles', (
                 SELECT jsonb_agg(
@@ -858,12 +858,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- 16. REGISTRAR USUARIO (Solo admin puede crear)
+-- 16. REGISTRAR USUARIO (Solo admin puede crear) - name + telefono 8 dígitos
 -- ============================================
 CREATE OR REPLACE FUNCTION registrar_usuario(
     p_name VARCHAR(100),
-    p_email VARCHAR(100),
-    p_password_hash TEXT,
+    p_telefono VARCHAR(8),
     p_created_by_id INTEGER,
     p_role_ids INTEGER[] DEFAULT ARRAY[]::INTEGER[]
 )
@@ -883,17 +882,17 @@ BEGIN
         );
     END IF;
     
-    -- Verificar que el email no existe
-    IF EXISTS (SELECT 1 FROM users WHERE email = p_email) THEN
+    -- Verificar que el teléfono no existe
+    IF EXISTS (SELECT 1 FROM users WHERE telefono = p_telefono) THEN
         RETURN jsonb_build_object(
             'exito', FALSE,
-            'error', 'El email ya está registrado'
+            'error', 'El teléfono ya está registrado'
         );
     END IF;
     
     -- Crear usuario
-    INSERT INTO users (name, email, password_hash, estado, created_by_id, created_at, updated_at)
-    VALUES (p_name, p_email, p_password_hash, 'activo', p_created_by_id, NOW(), NOW())
+    INSERT INTO users (name, telefono, estado, created_by_id, created_at, updated_at)
+    VALUES (p_name, p_telefono, 'activo', p_created_by_id, NOW(), NOW())
     RETURNING id INTO v_usuario_id;
     
     -- Asignar roles si se proporcionaron
@@ -922,27 +921,26 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- 17. LOGIN (Verificar credenciales)
+-- 17. LOGIN (nombre + teléfono 8 dígitos)
 -- ============================================
 CREATE OR REPLACE FUNCTION login_usuario(
-    p_email VARCHAR(100),
-    p_password_hash TEXT
+    p_name VARCHAR(100),
+    p_telefono VARCHAR(8)
 )
 RETURNS JSONB AS $$
 DECLARE
     v_usuario_id INTEGER;
     v_name VARCHAR(100);
-    v_email VARCHAR(100);
+    v_telefono VARCHAR(8);
     v_estado estado_general;
-    v_password_hash TEXT;
     v_last_login TIMESTAMP;
     v_roles JSONB;
 BEGIN
-    -- Buscar usuario
-    SELECT id, name, email, estado, password_hash, last_login
-    INTO v_usuario_id, v_name, v_email, v_estado, v_password_hash, v_last_login
+    -- Buscar usuario por nombre y teléfono
+    SELECT id, name, telefono, estado, last_login
+    INTO v_usuario_id, v_name, v_telefono, v_estado, v_last_login
     FROM users
-    WHERE email = p_email;
+    WHERE name = p_name AND telefono = p_telefono;
     
     -- Verificar que el usuario existe
     IF v_usuario_id IS NULL THEN
@@ -957,14 +955,6 @@ BEGIN
         RETURN jsonb_build_object(
             'exito', FALSE,
             'error', 'Usuario inactivo'
-        );
-    END IF;
-    
-    -- Verificar contraseña (comparar hash)
-    IF v_password_hash != p_password_hash THEN
-        RETURN jsonb_build_object(
-            'exito', FALSE,
-            'error', 'Credenciales inválidas'
         );
     END IF;
     
@@ -995,7 +985,7 @@ BEGIN
         'usuario', jsonb_build_object(
             'id', v_usuario_id,
             'name', v_name,
-            'email', v_email,
+            'telefono', v_telefono,
             'last_login', v_last_login
         ),
         'roles', COALESCE(v_roles, '[]'::jsonb)
@@ -1546,8 +1536,8 @@ COMMENT ON FUNCTION verificar_alerta_cierre_turno(INTEGER) IS 'Verifica el estad
 COMMENT ON FUNCTION crear_alerta_restriccion(INTEGER, INTEGER, DATE) IS 'Crea alertas de restricción para todos los usuarios';
 COMMENT ON FUNCTION obtener_ventas_por_turno(INTEGER, DATE, INTEGER, INTEGER, INTEGER) IS 'Obtiene ventas de un turno específico (para mostrar al hacer click en turno)';
 COMMENT ON FUNCTION obtener_historial_ventas(INTEGER, DATE, DATE, INTEGER, INTEGER, INTEGER) IS 'Obtiene historial de ventas con paginación y filtros';
-COMMENT ON FUNCTION registrar_usuario(VARCHAR, VARCHAR, TEXT, INTEGER, INTEGER[]) IS 'Registra un nuevo usuario (solo admin puede crear)';
-COMMENT ON FUNCTION login_usuario(VARCHAR, TEXT) IS 'Verifica credenciales y realiza login';
+COMMENT ON FUNCTION registrar_usuario(VARCHAR, VARCHAR, INTEGER, INTEGER[]) IS 'Registra un nuevo usuario (nombre, telefono 8 dígitos, creado_por_id, role_ids)';
+COMMENT ON FUNCTION login_usuario(VARCHAR, VARCHAR) IS 'Login por nombre y teléfono (8 dígitos)';
 COMMENT ON FUNCTION obtener_permisos_usuario(INTEGER) IS 'Obtiene todos los permisos de un usuario';
 COMMENT ON FUNCTION asignar_rol_usuario(INTEGER, INTEGER, INTEGER) IS 'Asigna un rol a un usuario';
 COMMENT ON FUNCTION remover_rol_usuario(INTEGER, INTEGER, INTEGER) IS 'Remueve un rol de un usuario';

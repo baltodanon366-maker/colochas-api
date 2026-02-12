@@ -41,13 +41,13 @@ export class GetUsersQueryDto {
 
   @ApiProperty({
     description: 'Campo para filtrar',
-    enum: ['email', 'name'],
+    enum: ['telefono', 'name'],
     required: false,
   })
   @IsOptional()
   @IsString({ message: 'filterField debe ser un texto' })
-  @IsIn(['email', 'name'], {
-    message: 'filterField debe ser uno de: email, name',
+  @IsIn(['telefono', 'name'], {
+    message: 'filterField debe ser uno de: telefono, name',
   })
   filterField?: string;
 
@@ -65,7 +65,7 @@ export class GetUsersQueryDto {
 
   @ApiProperty({
     description: 'Valor para la condición de filtro',
-    example: 'john@example.com',
+    example: '12345678',
     required: false,
   })
   @IsOptional()
@@ -74,25 +74,25 @@ export class GetUsersQueryDto {
 
   @ApiProperty({
     description: 'Campo para ordenar',
-    enum: ['email', 'name', 'createdAt'],
+    enum: ['telefono', 'name', 'createdAt'],
     required: false,
   })
   @IsOptional()
   @IsString({ message: 'sortField debe ser un texto' })
-  @IsIn(['email', 'name', 'createdAt'], {
-    message: 'sortField debe ser uno de: email, name, createdAt',
+  @IsIn(['telefono', 'name', 'createdAt'], {
+    message: 'sortField debe ser uno de: telefono, name, createdAt',
   })
   sortField?: string;
 
   @ApiProperty({
     description: 'Campo para ordenar (alternativa a sortField)',
-    enum: ['email', 'name', 'createdAt'],
+    enum: ['telefono', 'name', 'createdAt'],
     required: false,
   })
   @IsOptional()
   @IsString({ message: 'sortBy debe ser un texto' })
-  @IsIn(['email', 'name', 'createdAt'], {
-    message: 'sortBy debe ser uno de: email, name, createdAt',
+  @IsIn(['telefono', 'name', 'createdAt'], {
+    message: 'sortBy debe ser uno de: telefono, name, createdAt',
   })
   sortBy?: string;
 

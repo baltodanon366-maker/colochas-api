@@ -55,7 +55,7 @@ export class VentasService {
           select: {
             id: true,
             name: true,
-            email: true,
+            telefono: true,
           },
         },
         detallesVenta: true,
@@ -78,7 +78,7 @@ export class VentasService {
           select: {
             id: true,
             name: true,
-            email: true,
+            telefono: true,
           },
         },
         detallesVenta: true,

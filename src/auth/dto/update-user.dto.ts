@@ -21,12 +21,14 @@ export class UpdateAuthUserDto {
   username?: string;
 
   @ApiProperty({
-    description: 'Número de teléfono',
-    example: '+1234567890',
+    description: 'Número de teléfono (8 dígitos)',
+    example: '12345678',
     required: false,
+    minLength: 8,
+    maxLength: 8,
   })
   @IsOptional()
-  @IsString({ message: 'El número de teléfono debe ser un texto' })
-  phoneNumber?: string;
+  @IsString({ message: 'El teléfono debe ser un texto' })
+  telefono?: string;
 }
 

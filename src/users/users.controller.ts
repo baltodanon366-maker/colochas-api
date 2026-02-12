@@ -19,7 +19,6 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -89,17 +88,6 @@ export class UsersController {
     @CurrentUser() user: any,
   ) {
     return this.usersService.deactivate(id, user.id);
-  }
-
-  @Post(':id/password')
-  @ApiOperation({ summary: 'Actualizar contraseña del usuario' })
-  @ApiParam({ name: 'id', type: 'number' })
-  @ApiResponse({ status: 200, description: 'Contraseña actualizada' })
-  updatePassword(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updatePasswordDto: UpdatePasswordDto,
-  ) {
-    return this.usersService.updatePassword(id, updatePasswordDto);
   }
 
   @Get(':id/roles')
