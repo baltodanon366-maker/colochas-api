@@ -81,43 +81,30 @@ export class UsersService {
     });
   }
 
-  async activate(id: number, activatedById: number) {
-    if (id === activatedById) {
-      throw new ForbiddenException('No puedes activar tu propio usuario');
+  /**
+   * Hard delete: elimina el usuario y todas sus ventas (ya no aparecen en historial).
+   * Turnos/sorteos creados o realizados por él quedan con referencia NULL.
+   */
+  async delete(id: number, deletedById: number) {
+    if (id === deletedById) {
+      throw new ForbiddenException('No puedes eliminar tu propio usuario');
     }
 
-    const result = await this.prisma.$queryRaw<Array<{ resultado: any }>>`
-      SELECT activar_usuario(${id}::INTEGER, ${activatedById}::INTEGER) as resultado
-    `;
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { ventas: { select: { id: true } } },
+    });
 
-    const data = result[0]?.resultado;
-
-    if (!data || !data.exito) {
-      throw new BadRequestException(data?.error || 'Error al activar usuario');
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
     }
+
+    await this.prisma.user.delete({
+      where: { id },
+    });
 
     return {
-      message: data.message || 'Usuario activado exitosamente',
-    };
-  }
-
-  async deactivate(id: number, deactivatedById: number) {
-    if (id === deactivatedById) {
-      throw new ForbiddenException('No puedes desactivar tu propio usuario');
-    }
-
-    const result = await this.prisma.$queryRaw<Array<{ resultado: any }>>`
-      SELECT desactivar_usuario(${id}::INTEGER, ${deactivatedById}::INTEGER) as resultado
-    `;
-
-    const data = result[0]?.resultado;
-
-    if (!data || !data.exito) {
-      throw new BadRequestException(data?.error || 'Error al desactivar usuario');
-    }
-
-    return {
-      message: data.message || 'Usuario desactivado exitosamente',
+      message: 'Usuario eliminado correctamente. Sus ventas ya no aparecerán en el historial.',
     };
   }
 

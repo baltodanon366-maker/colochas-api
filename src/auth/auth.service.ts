@@ -43,7 +43,8 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { name, telefono } = loginDto;
+    const name = loginDto.name?.trim() ?? '';
+    const telefono = loginDto.telefono?.trim() ?? '';
 
     const user = await this.prisma.user.findFirst({
       where: { name, telefono },
@@ -134,7 +135,7 @@ export class AuthService {
       sortOrder = 'ASC',
     } = query;
 
-    const where: any = {};
+    const where: any = { estado: 'activo' };
 
     if (filterField && filterRule && filterValue) {
       const validFields = ['telefono', 'name', 'estado'];

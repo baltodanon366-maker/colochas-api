@@ -66,28 +66,21 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Post(':id/activate')
+  @Delete(':id')
   @Roles('admin')
-  @ApiOperation({ summary: 'Activar usuario (Solo admin)' })
+  @ApiOperation({
+    summary: 'Eliminar usuario (hard delete)',
+    description: 'Elimina el usuario y todas sus ventas. Ya no aparecerán en el historial.',
+  })
   @ApiParam({ name: 'id', type: 'number' })
-  @ApiResponse({ status: 200, description: 'Usuario activado' })
-  activate(
+  @ApiResponse({ status: 200, description: 'Usuario eliminado' })
+  @ApiResponse({ status: 403, description: 'No puedes eliminarte a ti mismo' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  delete(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: any,
   ) {
-    return this.usersService.activate(id, user.id);
-  }
-
-  @Post(':id/deactivate')
-  @Roles('admin')
-  @ApiOperation({ summary: 'Desactivar usuario (Solo admin)' })
-  @ApiParam({ name: 'id', type: 'number' })
-  @ApiResponse({ status: 200, description: 'Usuario desactivado' })
-  deactivate(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: any,
-  ) {
-    return this.usersService.deactivate(id, user.id);
+    return this.usersService.delete(id, user.id);
   }
 
   @Get(':id/roles')

@@ -153,12 +153,12 @@ model Turno {
   descripcion     String?   @db.Text
   mensaje         String?   @db.Text // Mensaje para mostrar en boucher
   estado          EstadoGeneral @default(activo)
-  createdById     Int       @map("created_by_id")
+  createdById     Int?      @map("created_by_id")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
 
   // Relations
-  createdBy       User      @relation("TurnoCreadoPor", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy       User?     @relation("TurnoCreadoPor", fields: [createdById], references: [id], onDelete: SetNull)
   ventas          Venta[] // Las ventas se relacionan directamente con el turno
   cierresTurno    CierreTurno[] // Marcadores de cierre
   restricciones   RestriccionNumero[]
@@ -187,7 +187,7 @@ model Venta {
 
   // Relations
   turno           Turno     @relation(fields: [turnoId], references: [id], onDelete: Restrict)
-  usuario         User      @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  usuario         User      @relation(fields: [usuarioId], references: [id], onDelete: Cascade) // Hard delete: al borrar usuario se borran sus ventas
   detallesVenta   DetalleVenta[] // Relación maestro-detalle
 
   @@index([numeroBoucher]) // Para búsqueda rápida en reclamos
@@ -267,14 +267,14 @@ model Sorteo {
   numeroGanador Int       @map("numero_ganador") // OBLIGATORIO
   montoPremio   Decimal?  @map("monto_premio") @db.Decimal(10, 2)
   descripcion   String?   @db.Text
-  realizadoPor  Int       @map("realizado_por")
+  realizadoPor  Int?      @map("realizado_por")
   realizadoEn   DateTime  @default(now()) @map("realizado_en") @db.Timestamp
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp
 
   // Relations
   turno         Turno     @relation(fields: [turnoId], references: [id], onDelete: Restrict)
-  realizadoPorUser User   @relation("SorteoCreadoPor", fields: [realizadoPor], references: [id], onDelete: Restrict)
+  realizadoPorUser User?  @relation("SorteoCreadoPor", fields: [realizadoPor], references: [id], onDelete: SetNull)
 
   @@unique([turnoId, fecha])
       @@index([turnoId])

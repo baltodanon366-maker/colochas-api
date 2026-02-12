@@ -27,6 +27,7 @@ const migrationStatements = [
   `ALTER TABLE users DROP COLUMN IF EXISTS email;`,
   `ALTER TABLE users DROP COLUMN IF EXISTS password_hash;`,
   `DROP INDEX IF EXISTS idx_users_email;`,
+  `UPDATE users SET name = 'Administrador' WHERE id = 1;`,
 ];
 
 const registrarUsuarioSQL = `
