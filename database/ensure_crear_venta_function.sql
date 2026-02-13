@@ -78,13 +78,12 @@ BEGIN
         );
     END IF;
     
-    -- Generar número de boucher (asumiendo que la función generar_numero_boucher existe)
+    -- Generar número de boucher (formato B-000013)
     BEGIN
         SELECT generar_numero_boucher() INTO v_numero_boucher;
     EXCEPTION
         WHEN OTHERS THEN
-            -- Si la función no existe, generar un número simple
-            v_numero_boucher := 'B-' || EXTRACT(YEAR FROM NOW()) || '-' || LPAD((COALESCE((SELECT MAX(id) FROM ventas), 0) + 1)::TEXT, 6, '0');
+            v_numero_boucher := 'B-' || LPAD((COALESCE((SELECT MAX(id) FROM ventas), 0) + 1)::TEXT, 6, '0');
     END;
     
     -- Crear venta

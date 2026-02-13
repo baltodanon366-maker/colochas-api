@@ -33,30 +33,23 @@ BEGIN
 END $$;
 
 -- ============================================
--- 1. GENERAR NÚMERO DE BOUCHER
+-- 1. GENERAR NÚMERO DE BOUCHER (formato: B-000013, sin año)
 -- ============================================
 CREATE OR REPLACE FUNCTION generar_numero_boucher()
 RETURNS VARCHAR(50) AS $$
 DECLARE
-    año INTEGER;
     siguiente_numero INTEGER;
     v_numero_boucher VARCHAR(50);
 BEGIN
-    año := EXTRACT(YEAR FROM NOW());
-    
-    -- Obtener el último número de boucher del año actual
-    -- Calificar la columna con el nombre de la tabla para evitar ambigüedad
+    -- Obtener la mayor secuencia de 6 dígitos al final de cualquier numero_boucher existente
     SELECT COALESCE(
-        MAX(CAST(SUBSTRING(ventas.numero_boucher FROM '[0-9]+$') AS INTEGER)), 
+        MAX(CAST(SUBSTRING(ventas.numero_boucher FROM '[0-9]+$') AS INTEGER)),
         0
-    ) INTO siguiente_numero
-    FROM ventas
-    WHERE ventas.numero_boucher LIKE 'B-' || año || '-%';
+    ) + 1 INTO siguiente_numero
+    FROM ventas;
     
-    siguiente_numero := siguiente_numero + 1;
-    
-    -- Formato: B-YYYY-NNNNNN
-    v_numero_boucher := 'B-' || año || '-' || LPAD(siguiente_numero::TEXT, 6, '0');
+    -- Formato: B-NNNNNN (ej. B-000013)
+    v_numero_boucher := 'B-' || LPAD(siguiente_numero::TEXT, 6, '0');
     
     RETURN v_numero_boucher;
 END;
@@ -255,7 +248,7 @@ BEGIN
         );
     END IF;
     
-    -- Generar número de boucher
+    -- Generar número de boucher (formato B-000013)
     v_numero_boucher := generar_numero_boucher();
     
     -- Crear venta
@@ -1521,7 +1514,7 @@ $$ LANGUAGE plpgsql;
 -- COMENTARIOS
 -- ============================================
 
-COMMENT ON FUNCTION generar_numero_boucher() IS 'Genera número de boucher único en formato B-YYYY-NNNNNN';
+COMMENT ON FUNCTION generar_numero_boucher() IS 'Genera número de boucher único en formato B-NNNNNN (ej. B-000013)';
 COMMENT ON FUNCTION verificar_restriccion_numero(INTEGER, INTEGER, DATE) IS 'Verifica si un número está restringido para un turno y fecha';
 COMMENT ON FUNCTION actualizar_contador_restriccion(INTEGER, INTEGER, DATE) IS 'Actualiza contador de restricción y marca como restringido si alcanza límite';
 COMMENT ON FUNCTION crear_venta(INTEGER, INTEGER, DATE, JSONB, TEXT) IS 'Crea una venta completa con validaciones y actualizaciones';
