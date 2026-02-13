@@ -7,6 +7,7 @@ import {
   UseGuards,
   ParseIntPipe,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -36,6 +37,9 @@ export class VentasController {
   @ApiResponse({ status: 201, description: 'Venta creada exitosamente' })
   @ApiResponse({ status: 400, description: 'Error al crear venta' })
   create(@Body() createVentaDto: CreateVentaDto, @CurrentUser() user: any) {
+    if (!user?.id) {
+      throw new BadRequestException('Usuario no identificado. Vuelve a iniciar sesión.');
+    }
     return this.ventasService.create(createVentaDto, user.id);
   }
 
