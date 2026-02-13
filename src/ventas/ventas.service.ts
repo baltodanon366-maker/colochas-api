@@ -9,60 +9,85 @@ export class VentasService {
   async create(createVentaDto: CreateVentaDto, usuarioId: number) {
     const { turnoId, fecha, detalles, observaciones } = createVentaDto;
 
+    if (usuarioId == null || usuarioId === undefined) {
+      throw new BadRequestException('Usuario no identificado. Vuelve a iniciar sesión.');
+    }
+
     // Convertir detalles a JSONB
     const detallesJson = JSON.stringify(detalles);
 
-    // Llamar al stored procedure usando $queryRaw con template literals
-    // Siempre pasar el 5to parámetro, usando null cuando observaciones es null
-    // PostgreSQL reconocerá el tipo y usará el DEFAULT si es necesario
     let result: Array<{ resultado: any }>;
     try {
-      // Siempre pasar los 5 parámetros, usando null cuando observaciones es null
-      // Prisma manejará el null correctamente con el cast ::text
       result = await this.prisma.$queryRaw<Array<{ resultado: any }>>`
         SELECT crear_venta(
-          ${turnoId}::integer, 
-          ${usuarioId}::integer, 
-          ${fecha}::date, 
-          ${detallesJson}::jsonb, 
+          ${turnoId}::integer,
+          ${usuarioId}::integer,
+          ${fecha}::date,
+          ${detallesJson}::jsonb,
           ${observaciones || null}::text
         ) as resultado
       `;
     } catch (error: any) {
-      // Si la función no existe, proporcionar un mensaje de error más claro
       if (error.message && error.message.includes('no existe la función')) {
         throw new BadRequestException(
-          'La función crear_venta no existe en la base de datos. Por favor, ejecute el script database/ensure_crear_venta_function.sql o database/stored_procedures.sql para crear las funciones necesarias.',
+          'La función crear_venta no existe en la base de datos. Ejecute database/ensure_crear_venta_function.sql o stored_procedures.sql.',
         );
       }
-      throw error;
-    }
-
-    const data = result[0]?.resultado;
-
-    if (!data || !data.exito) {
+      console.error('[VentasService.create] Error al llamar crear_venta:', error?.message || error);
       throw new BadRequestException(
-        data?.errores || data?.error || 'Error al crear venta',
+        error?.message || 'Error al crear la venta. Revisa que el turno esté activo y la fecha sea correcta.',
       );
     }
 
-    // Obtener la venta completa con detalles
-    const venta = await this.prisma.venta.findUnique({
-      where: { id: data.venta_id },
-      include: {
-        turno: true,
-        usuario: {
-          select: {
-            id: true,
-            name: true,
-            telefono: true,
-          },
-        },
-        detallesVenta: true,
-      },
-    });
+    let data: any = result[0]?.resultado;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        data = null;
+      }
+    }
+    if (!data) {
+      throw new BadRequestException('La base de datos no devolvió resultado al crear la venta.');
+    }
+    if (data.exito === false || !data.exito) {
+      const mensaje = Array.isArray(data.errores)
+        ? data.errores.join(' ')
+        : data.error || data.errores || 'Error al crear venta';
+      throw new BadRequestException(mensaje);
+    }
 
-    return venta;
+    const ventaId = data.venta_id ?? data.ventaId;
+    if (ventaId == null) {
+      throw new BadRequestException('No se obtuvo el ID de la venta creada.');
+    }
+
+    try {
+      const venta = await this.prisma.venta.findUnique({
+        where: { id: ventaId },
+        include: {
+          turno: true,
+          usuario: {
+            select: {
+              id: true,
+              name: true,
+              telefono: true,
+            },
+          },
+          detallesVenta: true,
+        },
+      });
+      if (!venta) {
+        throw new BadRequestException('Venta creada pero no se pudo recuperar. ID: ' + ventaId);
+      }
+      return venta;
+    } catch (err: any) {
+      if (err instanceof BadRequestException) throw err;
+      console.error('[VentasService.create] Error al obtener venta:', err?.message || err);
+      throw new BadRequestException(
+        err?.message || 'Venta creada pero falló al obtener el detalle. Recarga el historial.',
+      );
+    }
   }
 
   // Métodos eliminados por redundancia:
