@@ -3,14 +3,6 @@ import { IsNotEmpty, IsString, Length, Matches } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
-    description: 'Nombre del usuario (nombre completo)',
-    example: 'Administrador',
-  })
-  @IsString({ message: 'El nombre debe ser un texto' })
-  @IsNotEmpty({ message: 'El nombre es requerido' })
-  name: string;
-
-  @ApiProperty({
     description: 'Número de teléfono (8 dígitos)',
     example: '12345678',
     minLength: 8,

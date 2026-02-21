@@ -253,9 +253,9 @@ BEGIN
     
     -- Crear venta
     INSERT INTO ventas (
-        numero_boucher, turno_id, fecha, usuario_id, total, observaciones, created_at, updated_at
+        numero_boucher, turno_id, fecha, fecha_hora, usuario_id, total, observaciones, created_at, updated_at
     ) VALUES (
-        v_numero_boucher, p_turno_id, p_fecha, p_usuario_id, v_total, p_observaciones, NOW(), NOW()
+        v_numero_boucher, p_turno_id, p_fecha, NOW(), p_usuario_id, v_total, p_observaciones, NOW(), NOW()
     ) RETURNING id INTO v_venta_id;
     
     -- Crear detalles de venta
@@ -914,10 +914,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- 17. LOGIN (nombre + teléfono 8 dígitos)
+-- 17. LOGIN (solo teléfono 8 dígitos)
 -- ============================================
 CREATE OR REPLACE FUNCTION login_usuario(
-    p_name VARCHAR(100),
     p_telefono VARCHAR(8)
 )
 RETURNS JSONB AS $$
@@ -929,11 +928,11 @@ DECLARE
     v_last_login TIMESTAMP;
     v_roles JSONB;
 BEGIN
-    -- Buscar usuario por nombre y teléfono
+    -- Buscar usuario por teléfono
     SELECT id, name, telefono, estado, last_login
     INTO v_usuario_id, v_name, v_telefono, v_estado, v_last_login
     FROM users
-    WHERE name = p_name AND telefono = p_telefono;
+    WHERE telefono = p_telefono;
     
     -- Verificar que el usuario existe
     IF v_usuario_id IS NULL THEN
@@ -1530,7 +1529,7 @@ COMMENT ON FUNCTION crear_alerta_restriccion(INTEGER, INTEGER, DATE) IS 'Crea al
 COMMENT ON FUNCTION obtener_ventas_por_turno(INTEGER, DATE, INTEGER, INTEGER, INTEGER) IS 'Obtiene ventas de un turno específico (para mostrar al hacer click en turno)';
 COMMENT ON FUNCTION obtener_historial_ventas(INTEGER, DATE, DATE, INTEGER, INTEGER, INTEGER) IS 'Obtiene historial de ventas con paginación y filtros';
 COMMENT ON FUNCTION registrar_usuario(VARCHAR, VARCHAR, INTEGER, INTEGER[]) IS 'Registra un nuevo usuario (nombre, telefono 8 dígitos, creado_por_id, role_ids)';
-COMMENT ON FUNCTION login_usuario(VARCHAR, VARCHAR) IS 'Login por nombre y teléfono (8 dígitos)';
+COMMENT ON FUNCTION login_usuario(VARCHAR) IS 'Login por teléfono (8 dígitos)';
 COMMENT ON FUNCTION obtener_permisos_usuario(INTEGER) IS 'Obtiene todos los permisos de un usuario';
 COMMENT ON FUNCTION asignar_rol_usuario(INTEGER, INTEGER, INTEGER) IS 'Asigna un rol a un usuario';
 COMMENT ON FUNCTION remover_rol_usuario(INTEGER, INTEGER, INTEGER) IS 'Remueve un rol de un usuario';

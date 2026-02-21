@@ -86,11 +86,11 @@ BEGIN
             v_numero_boucher := 'B-' || LPAD((COALESCE((SELECT MAX(id) FROM ventas), 0) + 1)::TEXT, 6, '0');
     END;
     
-    -- Crear venta
+    -- Crear venta (incluir fecha_hora, created_at, updated_at para evitar NOT NULL)
     INSERT INTO ventas (
-        numero_boucher, turno_id, fecha, usuario_id, total, observaciones
+        numero_boucher, turno_id, fecha, fecha_hora, usuario_id, total, observaciones, created_at, updated_at
     ) VALUES (
-        v_numero_boucher, p_turno_id, p_fecha, p_usuario_id, v_total, p_observaciones
+        v_numero_boucher, p_turno_id, p_fecha, NOW(), p_usuario_id, v_total, p_observaciones, NOW(), NOW()
     ) RETURNING id INTO v_venta_id;
     
     -- Crear detalles de venta

@@ -75,7 +75,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login', description: 'User login' })
+  @ApiOperation({ summary: 'Login', description: 'Login con número de teléfono (8 dígitos)' })
   @ApiResponse({
     status: 200,
     description: 'Login successful',

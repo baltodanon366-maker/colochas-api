@@ -43,11 +43,10 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const name = loginDto.name?.trim() ?? '';
     const telefono = loginDto.telefono?.trim() ?? '';
 
     const user = await this.prisma.user.findFirst({
-      where: { name, telefono },
+      where: { telefono },
       include: {
         roles: {
           include: {

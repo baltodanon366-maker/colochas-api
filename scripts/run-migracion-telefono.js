@@ -72,7 +72,6 @@ $$ LANGUAGE plpgsql;
 
 const loginUsuarioSQL = `
 CREATE OR REPLACE FUNCTION login_usuario(
-    p_name VARCHAR(100),
     p_telefono VARCHAR(8)
 )
 RETURNS JSONB AS $$
@@ -87,7 +86,7 @@ BEGIN
     SELECT id, name, telefono, estado, last_login
     INTO v_usuario_id, v_name, v_telefono, v_estado, v_last_login
     FROM users
-    WHERE name = p_name AND telefono = p_telefono;
+    WHERE telefono = p_telefono;
     IF v_usuario_id IS NULL THEN
         RETURN jsonb_build_object('exito', FALSE, 'error', 'Credenciales inválidas');
     END IF;
