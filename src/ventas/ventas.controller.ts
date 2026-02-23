@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Delete,
   UseGuards,
   ParseIntPipe,
   Query,
@@ -63,6 +64,17 @@ export class VentasController {
   @ApiResponse({ status: 404, description: 'Venta no encontrada' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.ventasService.findOne(id);
+  }
+
+  @Delete(':id')
+  @Roles('admin', 'vendedor')
+  @ApiOperation({ summary: 'Eliminar venta (hard delete)' })
+  @ApiParam({ name: 'id', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Venta eliminada' })
+  @ApiResponse({ status: 404, description: 'Venta no encontrada' })
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.ventasService.delete(id);
+    return { message: 'Venta eliminada correctamente' };
   }
 }
 

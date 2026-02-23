@@ -130,5 +130,14 @@ export class VentasService {
 
     return data.data;
   }
+
+  /** Hard delete: elimina la venta y sus detalles (cascade en BD). */
+  async delete(id: number): Promise<void> {
+    const venta = await this.prisma.venta.findUnique({ where: { id } });
+    if (!venta) {
+      throw new NotFoundException(`Venta con ID ${id} no encontrada`);
+    }
+    await this.prisma.venta.delete({ where: { id } });
+  }
 }
 
