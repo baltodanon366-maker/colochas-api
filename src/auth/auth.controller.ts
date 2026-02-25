@@ -19,7 +19,6 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { UpdateAuthUserDto } from './dto/update-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
@@ -110,25 +109,6 @@ export class AuthController {
   })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
-  }
-
-  @Public()
-  @Post('refresh')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh token', description: 'Obtener nuevo access_token con refresh_token' })
-  @ApiResponse({
-    status: 200,
-    description: 'Token renovado',
-    schema: {
-      example: {
-        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        user: { id: '1', name: 'John Doe', telefono: '12345678', roles: ['admin'] },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Refresh token inválido o expirado' })
-  async refresh(@Body() dto: RefreshDto) {
-    return this.authService.refresh(dto.refresh_token);
   }
 
   // Endpoints eliminados por redundancia:

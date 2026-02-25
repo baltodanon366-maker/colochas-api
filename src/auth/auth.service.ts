@@ -79,59 +79,10 @@ export class AuthService {
       roles,
     };
 
-    const accessToken = this.jwtService.sign(payload);
-    const refreshSecret = this.configService.get<string>('jwt.refreshSecret') || this.configService.get<string>('JWT_SECRET');
-    const refreshExpiresIn = this.configService.get<string>('jwt.refreshExpiresIn') || '7d';
-    const refreshToken = this.jwtService.sign(
-      { sub: user.id, type: 'refresh' },
-      { secret: refreshSecret, expiresIn: refreshExpiresIn as any },
-    );
+    const token = this.jwtService.sign(payload);
 
     return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      user: {
-        id: user.id.toString(),
-        name: user.name,
-        telefono: user.telefono,
-        roles,
-      },
-    };
-  }
-
-  async refresh(refreshToken: string) {
-    if (!refreshToken?.trim()) {
-      throw new UnauthorizedException('Refresh token requerido');
-    }
-    const refreshSecret = this.configService.get<string>('jwt.refreshSecret') || this.configService.get<string>('JWT_SECRET');
-    let payload: { sub: number; type?: string };
-    try {
-      payload = this.jwtService.verify(refreshToken, { secret: refreshSecret });
-    } catch {
-      throw new UnauthorizedException('Refresh token inválido o expirado');
-    }
-    if (payload.type !== 'refresh') {
-      throw new UnauthorizedException('Token inválido');
-    }
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      include: {
-        roles: { include: { role: true } },
-      },
-    });
-    if (!user || user.estado === 'inactivo') {
-      throw new UnauthorizedException('Usuario no encontrado o inactivo');
-    }
-    const roles = user.roles
-      .filter((ur) => ur.role.estado === 'activo')
-      .map((ur) => ur.role.nombre);
-    const newAccessToken = this.jwtService.sign({
-      sub: user.id,
-      telefono: user.telefono,
-      roles,
-    });
-    return {
-      access_token: newAccessToken,
+      access_token: token,
       user: {
         id: user.id.toString(),
         name: user.name,
